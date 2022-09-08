@@ -73,7 +73,7 @@ contract DGP {
     Proposal public proposal; // current proposal
     uint16 private _minimumGovernors = 100; // how many governors must exist before voting is enabled
     address private _governanceAddress =
-        address(0x0000000000000000000000000000000000000089); // address of governance contract
+        address(0x0000000000000000000000000000000000000099); // address of governance contract
 
     // DGP
     address public gasScheduleAddress =

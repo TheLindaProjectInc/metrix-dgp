@@ -22,9 +22,9 @@ interface DGPInterface {
 contract Budget {
     // address of the external contracts
     address private _dgpAddress =
-        address(0x0000000000000000000000000000000000000088);
+        address(0x0000000000000000000000000000000000000098);
     address private _governanceAddress =
-        address(0x0000000000000000000000000000000000000089);
+        address(0x0000000000000000000000000000000000000099);
 
     // Data structures
     enum Vote {

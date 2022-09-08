@@ -13,10 +13,10 @@ interface DGPInterface {
 contract Governance {
     // dgp
     address payable private _dgpAddress =
-        payable(address(0x0000000000000000000000000000000000000088));
+        payable(address(0x0000000000000000000000000000000000000098));
 
     address payable private _budgetAddress =
-        payable(address(0x0000000000000000000000000000000000000090));
+        payable(address(0x0000000000000000000000000000000000000100));
 
     // governors
     struct Governor {
@@ -157,15 +157,7 @@ contract Governance {
                 (bool stash, ) = payable(_budgetAddress).call{value: refund}(
                     ""
                 );
-                if (!stash) {
-                    (bool burn, ) = payable(address(0x0)).call{value: refund}(
-                        ""
-                    );
-                    require(
-                        burn,
-                        "Governance: Failed to stash then failed to burn"
-                    );
-                }
+                require(stash, "Governance: Failed to stash the collateral");
             }
             // reset last reward
             governors[msg.sender].lastReward = 0;
@@ -198,13 +190,8 @@ contract Governance {
         (bool sent, ) = payable(governorAddress).call{value: refund}("");
         if (!sent) {
             (bool stash, ) = payable(_budgetAddress).call{value: refund}("");
-            if (!stash) {
-                (bool burn, ) = payable(address(0x0)).call{value: refund}("");
-                require(
-                    burn,
-                    "Governance: Failed to stash then failed to burn"
-                );
-            }
+
+            require(stash, "Governance: Failed to stash removal failure funds");
         }
     }
 
