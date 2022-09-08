@@ -280,9 +280,11 @@ contract Governance {
             "Governance: Address is not a valid governor"
         );
         require(
-            governors[winner].lastReward > 0 &&
-                block.number - governors[winner].lastReward >=
-                _rewardBlockInterval,
+            block.number - 1920 >= governors[winner].blockHeight,
+            "Governance: Address Immature"
+        );
+        require(
+            block.number - governors[winner].lastReward >= _rewardBlockInterval,
             "Governance: Last reward too recent"
         );
         return true;
