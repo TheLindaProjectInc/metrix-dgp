@@ -13,6 +13,6 @@
         "keccak": "^3.0.0",
         "mocha": "^7.0.1",
         "qtumjs": "https://github.com/TheLindaProjectInc/qtumjs.git",
-        "solc": "^0.5.8"
+        "solc": "^0.8.7"
     }
 }

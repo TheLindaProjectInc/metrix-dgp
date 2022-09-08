@@ -1,21 +1,22 @@
-pragma solidity 0.5.8;
-import "./SafeMath.sol";
+// SPDX-License-Identifier: MIT
 
+pragma solidity ^0.8.7;
 
 // interfaces
-contract DGPInterface {
-    function getGovernanceCollateral() public view returns (uint256[1] memory);
+interface DGPInterface {
+    function getGovernanceCollateral()
+        external
+        view
+        returns (uint256[1] memory);
 }
 
-
 contract Governance {
-    // imports
-    using SafeMath for uint256;
-
     // dgp
-    address private _dgpAddress = address(
-        0x0000000000000000000000000000000000000088
-    );
+    address payable private _dgpAddress =
+        payable(address(0x0000000000000000000000000000000000000088));
+
+    address payable private _budgetAddress =
+        payable(address(0x0000000000000000000000000000000000000090));
 
     // governors
     struct Governor {
@@ -68,12 +69,12 @@ contract Governance {
         // check if a governor
         require(
             governors[tx.origin].blockHeight > 0,
-            "Must be a governor to ping"
+            "Governance: Must be a governor to ping"
         );
         // check if governor is valid
         require(
             isValidGovernor(tx.origin, false, false),
-            "Governor is not currently valid"
+            "Governance: Governor is not currently valid"
         );
         // update ping
         governors[tx.origin].lastPing = block.number;
@@ -84,17 +85,19 @@ contract Governance {
     // if the required collateral has increased allow addresses to top up
     function enroll() public payable {
         // must send an amount
-        require(msg.value > 0, "Collateral is required for enrollment");
+        require(
+            msg.value > 0,
+            "Governance: Collateral is required for enrollment"
+        );
         uint256 requiredCollateral = getRequiredCollateral();
         // check if new enrollment or topup
         if (governors[msg.sender].blockHeight > 0) {
             // address is already a governor. If the collateral has increase, allow a topup
-            uint256 newCollateral = governors[msg.sender].collateral.add(
-                msg.value
-            );
+            uint256 newCollateral = governors[msg.sender].collateral +
+                msg.value;
             require(
                 newCollateral == requiredCollateral,
-                "Topup collateral must be exact"
+                "Governance: Topup collateral must be exact"
             );
             governors[msg.sender].collateral = requiredCollateral;
             governors[msg.sender].lastPing = block.number;
@@ -103,12 +106,12 @@ contract Governance {
             // haven't reached maximum governors
             require(
                 _governorCount < _maximumGovernors,
-                "The maximum number of governors has been reached"
+                "Governance: The maximum number of governors has been reached"
             );
             // address is a not already a governor. collateral must be exact
             require(
                 msg.value == requiredCollateral,
-                "New collateral must be exact"
+                "Governance: New collateral must be exact"
             );
             // add governor
             governors[msg.sender] = Governor({
@@ -133,25 +136,37 @@ contract Governance {
         );
         uint256 requiredCollateral = getRequiredCollateral();
         // check blocks have passed to make a change
-        uint256 enrolledAt = governors[msg.sender].blockHeight.add(
-            _blockBeforeMatureGovernor
-        );
+        uint256 enrolledAt = governors[msg.sender].blockHeight +
+            _blockBeforeMatureGovernor;
         require(block.number > enrolledAt, "Too early to unenroll");
         if (!force && governors[msg.sender].collateral > requiredCollateral) {
             // if the required collateral has changed allow it to be reduce without unenrolling
-            uint256 refund = governors[msg.sender].collateral.sub(
-                requiredCollateral
-            );
+            uint256 refund = governors[msg.sender].collateral -
+                requiredCollateral;
             // safety check balance
             require(
-                address(this).balance >= refund,
-                "Contract does not contain enough funds"
+                payable(address(this)).balance >= refund,
+                "Governance: Contract does not contain enough funds"
             );
             // update governor
             governors[msg.sender].collateral = requiredCollateral;
             governors[msg.sender].lastPing = block.number;
             // send refund
-            msg.sender.transfer(refund);
+            (bool sent, ) = payable(msg.sender).call{value: refund}("");
+            if (!sent) {
+                (bool stash, ) = payable(_budgetAddress).call{value: refund}(
+                    ""
+                );
+                if (!stash) {
+                    (bool burn, ) = payable(address(0x0)).call{value: refund}(
+                        ""
+                    );
+                    require(
+                        burn,
+                        "Governance: Failed to stash then failed to burn"
+                    );
+                }
+            }
             // reset last reward
             governors[msg.sender].lastReward = 0;
         } else {
@@ -165,7 +180,7 @@ contract Governance {
         // safety check balance
         require(
             address(this).balance >= refund,
-            "Contract does not contain enough funds"
+            "Governance: Contract does not contain enough funds"
         );
         // remove governor
         delete governors[governorAddress];
@@ -179,20 +194,29 @@ contract Governance {
         }
         // remove last element from array
         delete governorAddresses[arrayLen - 1];
-        governorAddresses.length--;
         // refund
-        address(uint160(governorAddress)).transfer(refund);
+        (bool sent, ) = payable(governorAddress).call{value: refund}("");
+        if (!sent) {
+            (bool stash, ) = payable(_budgetAddress).call{value: refund}("");
+            if (!stash) {
+                (bool burn, ) = payable(address(0x0)).call{value: refund}("");
+                require(
+                    burn,
+                    "Governance: Failed to stash then failed to burn"
+                );
+            }
+        }
     }
 
     // returns true if a governor exists, is mature and has the correct collateral
-    function isValidGovernor(address governorAddress, bool checkPing, bool checkCanVote)
-        public
-        view
-        returns (bool valid)
-    {
+    function isValidGovernor(
+        address governorAddress,
+        bool checkPing,
+        bool checkCanVote
+    ) public view returns (bool valid) {
         // must be a mature governor
         if (
-            block.number.sub(governors[governorAddress].blockHeight) <
+            block.number - governors[governorAddress].blockHeight <
             _blockBeforeMatureGovernor
         ) {
             return false;
@@ -205,7 +229,7 @@ contract Governance {
         // must have sent a recent ping
         if (
             checkPing &&
-            block.number.sub(governors[governorAddress].lastPing) >
+            block.number - governors[governorAddress].lastPing >
             _pingBlockInterval
         ) {
             return false;
@@ -213,7 +237,8 @@ contract Governance {
         // must wait 28 days to vote
         if (
             checkCanVote &&
-            block.number.sub(governors[governorAddress].blockHeight) < _blockBeforeGovernorVote
+            block.number - governors[governorAddress].blockHeight <
+            _blockBeforeGovernorVote
         ) {
             return false;
         }
@@ -228,7 +253,7 @@ contract Governance {
         // amount must be the equal to the reward amount
         require(
             block.number > _lastRewardBlock,
-            "A Reward has already been paid in this block"
+            "Governance: A Reward has already been paid in this block"
         );
         _lastRewardBlock = block.number;
         if (winner != address(uint160(0x0))) {
@@ -236,21 +261,29 @@ contract Governance {
             isValidWinner(winner);
             // pay governor
             governors[winner].lastReward = block.number;
-            address(uint160(winner)).transfer(msg.value);
+            (bool sent, ) = payable(winner).call{value: msg.value}("");
+            if (!sent) {
+                (bool burned, ) = payable(address(0x0)).call{value: msg.value}(
+                    ""
+                );
+                require(burned, "Governance: Failed to burn failed reward");
+            }
         } else {
-            address(uint160(0x0)).transfer(msg.value);
+            (bool burned, ) = payable(address(0x0)).call{value: msg.value}("");
+            require(burned, "Governance: Failed to burn failed reward");
         }
     }
 
     function isValidWinner(address winner) private view returns (bool) {
         require(
             isValidGovernor(winner, true, false),
-            "Address is not a valid governor"
+            "Governance: Address is not a valid governor"
         );
         require(
-            block.number.sub(governors[winner].lastReward) >=
+            governors[winner].lastReward > 0 &&
+                block.number - governors[winner].lastReward >=
                 _rewardBlockInterval,
-            "Last reward too recent"
+            "Governance: Last reward too recent"
         );
         return true;
     }
@@ -260,7 +293,7 @@ contract Governance {
         for (i = 0; i < _governorCount; i++) {
             if (
                 isValidGovernor(governorAddresses[i], true, false) &&
-                block.number.sub(governors[governorAddresses[i]].lastReward) >=
+                block.number - governors[governorAddresses[i]].lastReward >=
                 _rewardBlockInterval
             ) {
                 return governorAddresses[i];
@@ -279,7 +312,7 @@ contract Governance {
                 break;
             }
             if (
-                block.number.sub(governors[governorAddresses[i]].lastPing) >
+                block.number - governors[governorAddresses[i]].lastPing >
                 _pingBlockInterval
             ) {
                 removeGovernor(governorAddresses[i]);
