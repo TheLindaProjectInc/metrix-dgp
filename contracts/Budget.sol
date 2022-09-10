@@ -2,29 +2,15 @@
 
 pragma solidity ^0.8.7;
 
-// Governance interface
-interface GovernanceInterface {
-    function isValidGovernor(
-        address governorAddress,
-        bool checkPing,
-        bool checkCanVote
-    ) external view returns (bool valid);
 
-    function ping() external;
+import "./DGP.sol";
+import "./Governance.sol";
 
-    function governorCount() external returns (uint16);
-}
-
-interface DGPInterface {
-    function getBudgetFee() external view returns (uint256[1] memory);
-}
 
 contract Budget {
     // address of the external contracts
-    address private _dgpAddress =
-        address(0x0000000000000000000000000000000000000098);
-    address private _governanceAddress =
-        address(0x0000000000000000000000000000000000000099);
+    address payable immutable private dgpAddress;
+    address payable immutable  private governanceAddress;
 
     // Data structures
     enum Vote {
@@ -68,6 +54,12 @@ contract Budget {
     uint256 private _budgetPeriod = 29220; // 365.25/12*960
     uint256 _budgetNextSettlementBlock = _budgetPeriod;
 
+
+    constructor(address payable _dgpAddress, address payable _governanceAddress){
+        dgpAddress = _dgpAddress;
+        governanceAddress = _governanceAddress;
+    }
+
     /** @dev Function to start a new proposal.
      * @param title Title of the proposal to be created
      * @param description Brief description about the proposal
@@ -82,7 +74,7 @@ contract Budget {
         uint256 requested,
         uint8 duration
     ) public payable {
-        DGPInterface contractInterface = DGPInterface(_dgpAddress);
+        DGP contractInterface = DGP(dgpAddress);
         uint256 listingFee = contractInterface.getBudgetFee()[0];
         // limit number of active proposals
         require(
@@ -137,8 +129,8 @@ contract Budget {
      * @param vote the vote being cast (no, yes, abstain)
      */
     function voteForProposal(uint8 proposalId, Vote vote) public {
-        GovernanceInterface governanceInterface = GovernanceInterface(
-            _governanceAddress
+        Governance governanceInterface = Governance(
+            governanceAddress
         );
         // must be a valid governor
         require(
@@ -222,8 +214,8 @@ contract Budget {
         // set new budget block
         _budgetNextSettlementBlock = block.number + _budgetPeriod;
         // create governance contract interface
-        GovernanceInterface governanceInterface = GovernanceInterface(
-            _governanceAddress
+        Governance governanceInterface = Governance(
+            governanceAddress
         );
         uint16 governorCount = governanceInterface.governorCount();
         bool canSettleBudget = governorCount >= _minimumGovernors;

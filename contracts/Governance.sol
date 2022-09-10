@@ -2,21 +2,14 @@
 
 pragma solidity ^0.8.7;
 
-// interfaces
-interface DGPInterface {
-    function getGovernanceCollateral()
-        external
-        view
-        returns (uint256[1] memory);
-}
+import "./DGP.sol";
+import "./Budget.sol";
 
 contract Governance {
     // dgp
-    address payable private _dgpAddress =
-        payable(address(0x0000000000000000000000000000000000000098));
+    address payable immutable public dgpAddress;
 
-    address payable private _budgetAddress =
-        payable(address(0x0000000000000000000000000000000000000100));
+    address payable immutable public budgetAddress;
 
     // governors
     struct Governor {
@@ -40,6 +33,11 @@ contract Governance {
     uint16 private _rewardBlockInterval = 1920; // how often governors are rewarded. At minimum it should be the size of _maximumGovernors
     uint256 private _lastRewardBlock = 0; // only allow reward to be paid once per block
 
+    constructor(address payable _dgpAddress) {
+        dgpAddress = _dgpAddress;
+        budgetAddress = payable(address(new Budget(_dgpAddress, payable(address(this)))));
+    }
+
     // ------------------------------
     // ----- GOVERNANCE SYSTEM ------
     // ------------------------------
@@ -51,7 +49,7 @@ contract Governance {
 
     // get required governor collateral
     function getRequiredCollateral() private view returns (uint256) {
-        DGPInterface contractInterface = DGPInterface(_dgpAddress);
+        DGP contractInterface = DGP(dgpAddress);
         return contractInterface.getGovernanceCollateral()[0];
     }
 
@@ -154,7 +152,7 @@ contract Governance {
             // send refund
             (bool sent, ) = payable(msg.sender).call{value: refund}("");
             if (!sent) {
-                (bool stash, ) = payable(_budgetAddress).call{value: refund}(
+                (bool stash, ) = payable(budgetAddress).call{value: refund}(
                     ""
                 );
                 require(stash, "Governance: Failed to stash the collateral");
@@ -189,7 +187,7 @@ contract Governance {
         // refund
         (bool sent, ) = payable(governorAddress).call{value: refund}("");
         if (!sent) {
-            (bool stash, ) = payable(_budgetAddress).call{value: refund}("");
+            (bool stash, ) = payable(budgetAddress).call{value: refund}("");
 
             require(stash, "Governance: Failed to stash removal failure funds");
         }

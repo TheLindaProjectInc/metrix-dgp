@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.7;
 
+import "./Governance.sol";
+
 // interfaces
 interface GasScheduleInterface {
     function getSchedule() external view returns (uint32[39] memory);
@@ -34,17 +36,6 @@ interface BudgetFeeInterface {
     function getBudgetFee() external view returns (uint256[1] memory);
 }
 
-interface GovernanceInterface {
-    function isValidGovernor(
-        address governorAddress,
-        bool checkPing,
-        bool checkCanVote
-    ) external view returns (bool valid);
-
-    function ping() external;
-
-    function governorCount() external returns (uint16);
-}
 
 contract DGP {
     // events
@@ -72,8 +63,7 @@ contract DGP {
     uint16 private _proposalExpiryBlocks = 14 * 960; // blocks for proposal to expire
     Proposal public proposal; // current proposal
     uint16 private _minimumGovernors = 100; // how many governors must exist before voting is enabled
-    address private _governanceAddress =
-        address(0x0000000000000000000000000000000000000099); // address of governance contract
+    address payable immutable private governanceAddress; // address of governance contract
 
     // DGP
     address public gasScheduleAddress =
@@ -91,6 +81,11 @@ contract DGP {
     address public budgetFeeAddress =
         address(0x0000000000000000000000000000000000000087);
 
+
+    constructor(){
+        governanceAddress = payable(address(new Governance(payable(address(this)))));
+    }
+
     // ------------------------------
     // ------- PROPOSAL VOTING ------
     // ------------------------------
@@ -99,8 +94,8 @@ contract DGP {
     function addProposal(ProposalType proposalType, address proposalAddress)
         public
     {
-        GovernanceInterface contractInterface = GovernanceInterface(
-            _governanceAddress
+        Governance contractInterface = Governance(
+            governanceAddress
         );
         uint16 governorCount = contractInterface.governorCount();
 
