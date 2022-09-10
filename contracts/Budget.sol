@@ -9,8 +9,8 @@ import "./Governance.sol";
 
 contract Budget {
     // address of the external contracts
-    address payable immutable private dgpAddress;
-    address payable immutable  private governanceAddress;
+    address payable immutable public dgpAddress;
+    address payable immutable  public governanceAddress;
 
     // Data structures
     enum Vote {

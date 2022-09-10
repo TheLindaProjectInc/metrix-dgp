@@ -63,7 +63,7 @@ contract DGP {
     uint16 private _proposalExpiryBlocks = 14 * 960; // blocks for proposal to expire
     Proposal public proposal; // current proposal
     uint16 private _minimumGovernors = 100; // how many governors must exist before voting is enabled
-    address payable immutable private governanceAddress; // address of governance contract
+    address payable immutable public governanceAddress; // address of governance contract
 
     // DGP
     address public gasScheduleAddress =
