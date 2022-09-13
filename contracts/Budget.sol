@@ -237,13 +237,12 @@ contract Budget {
                 } else {
                     // allocate any funds for active projects
                     if (proposals[i].durationsPaid < proposals[i].duration) {
-                        if (address(this).balance >= proposals[i].requested) {
+                        if (payable(address(this)).balance >= proposals[i].requested) {
                             // fund project
                             proposals[i].durationsPaid += 1;
                             (bool sent, ) = payable(proposals[i].owner).call{
                                 value: proposals[i].requested
                             }("");
-                            require(sent, "Budget: Settlement failed");
                         }
                     }
                     // remove project if complete
@@ -255,11 +254,9 @@ contract Budget {
         }
 
         // destroy any left over funds
-        if (address(this).balance > 0) {
-            (bool burn, ) = payable(address(0x0)).call{
-                value: payable(address(this)).balance
-            }("");
-            require(burn, "Budget: Failed to burn left over funds");
+        if (payable(address(this)).balance > 0) {
+            payable(address(0x0)).transfer(
+                payable(address(this)).balance);
         }
     }
 

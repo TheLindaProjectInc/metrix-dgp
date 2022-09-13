@@ -169,7 +169,7 @@ contract Governance {
         uint16 addressIndex = governors[governorAddress].addressIndex;
         // safety check balance
         require(
-            address(this).balance >= refund,
+            payable(address(this)).balance >= refund,
             "Governance: Contract does not contain enough funds"
         );
         // remove governor
@@ -248,14 +248,10 @@ contract Governance {
             governors[winner].lastReward = block.number;
             (bool sent, ) = payable(winner).call{value: msg.value}("");
             if (!sent) {
-                (bool burned, ) = payable(address(0x0)).call{value: msg.value}(
-                    ""
-                );
-                require(burned, "Governance: Failed to burn failed reward");
+                payable(address(0x0)).transfer(msg.value);
             }
         } else {
-            (bool burned, ) = payable(address(0x0)).call{value: msg.value}("");
-            require(burned, "Governance: Failed to burn failed reward");
+            payable(address(0x0)).transfer(msg.value);
         }
     }
 
