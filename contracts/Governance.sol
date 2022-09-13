@@ -44,7 +44,7 @@ contract Governance {
 
     // get total governor funds
     function balance() public view returns (uint256) {
-        return address(this).balance;
+        return payable(address(this)).balance;
     }
 
     // get required governor collateral
@@ -153,7 +153,7 @@ contract Governance {
             (bool sent, ) = payable(msg.sender).call{value: refund}("");
             if (!sent) {
                 (bool stash, ) = payable(budgetAddress).call{value: refund}(
-                    ""
+                    abi.encodeWithSignature("fund()")
                 );
                 require(stash, "Governance: Failed to stash the collateral");
             }
@@ -187,7 +187,7 @@ contract Governance {
         // refund
         (bool sent, ) = payable(governorAddress).call{value: refund}("");
         if (!sent) {
-            (bool stash, ) = payable(budgetAddress).call{value: refund}("");
+            (bool stash, ) = payable(budgetAddress).call{value: refund}(abi.encodeWithSignature("fund()"));
 
             require(stash, "Governance: Failed to stash removal failure funds");
         }

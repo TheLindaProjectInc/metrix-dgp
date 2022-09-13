@@ -202,7 +202,7 @@ contract Budget {
     /** @dev Function to return current contract funds.
      */
     function balance() public view returns (uint256) {
-        return address(this).balance;
+        return payable(address(this)).balance;
     }
 
     /** @dev Function to fund the budget in the coinstake as well as
