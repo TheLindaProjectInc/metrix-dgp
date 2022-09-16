@@ -18,11 +18,11 @@ interface MinGasPriceInterface {
 }
 
 interface BlockGasLimitInterface {
-    function getBlockGasLimit() external view returns (uint256[1] memory);
+    function getBlockGasLimit() external view returns (uint64[1] memory);
 }
 
 interface TransactionFeeRatesInterface {
-    function getTransactionFeeRates() external view returns (uint256[3] memory);
+    function getTransactionFeeRates() external view returns (uint64[3] memory);
 }
 
 interface GovernanceCollateralInterface {
@@ -219,7 +219,7 @@ contract DGP {
             TransactionFeeRatesInterface ci = TransactionFeeRatesInterface(
                 proposalAddress
             );
-            uint256[3] memory result = ci.getTransactionFeeRates();
+            uint64[3] memory result = ci.getTransactionFeeRates();
             for (uint8 i = 0; i < 3; i++) {
                 if (result[i] == 0) return false;
             }
@@ -260,14 +260,14 @@ contract DGP {
         return contractInterface.getMinGasPrice();
     }
 
-    function getBlockGasLimit() public view returns (uint256[1] memory) {
+    function getBlockGasLimit() public view returns (uint64[1] memory) {
         BlockGasLimitInterface contractInterface = BlockGasLimitInterface(
             blockGasLimitAddress
         );
         return contractInterface.getBlockGasLimit();
     }
 
-    function getTransactionFeeRates() public view returns (uint256[3] memory) {
+    function getTransactionFeeRates() public view returns (uint64[3] memory) {
         TransactionFeeRatesInterface contractInterface = TransactionFeeRatesInterface(
                 transactionFeeRatesAddress
             );
