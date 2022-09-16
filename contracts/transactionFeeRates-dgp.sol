@@ -6,7 +6,7 @@ contract transactionFeeRates {
         10E8, //1: incrementalRelayFee
         30E8  //2: dustRelayFee
     ];
-    function getTransactionFeeRates() public view returns (uint256[3] memory) {
+    function getTransactionFeeRates() public view returns (uint64[3] memory) {
         return _transactionFeeRates;
     }
 }
