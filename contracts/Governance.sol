@@ -66,16 +66,16 @@ contract Governance {
     function ping() public {
         // check if a governor
         require(
-            governors[tx.origin].blockHeight > 0,
+            governors[msg.sender].blockHeight > 0,
             "Governance: Must be a governor to ping"
         );
         // check if governor is valid
         require(
-            isValidGovernor(tx.origin, false, false),
+            isValidGovernor(msg.sender, false, false),
             "Governance: Governor is not currently valid"
         );
         // update ping
-        governors[tx.origin].lastPing = block.number;
+        governors[msg.sender].lastPing = block.number;
     }
 
     // enroll an address to be a governor
