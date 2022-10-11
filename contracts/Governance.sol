@@ -183,7 +183,7 @@ contract Governance {
             governors[updateAddr].addressIndex = addressIndex;
         }
         // remove last element from array
-        delete governorAddresses[arrayLen - 1];
+        governorAddresses.pop();
         // refund
         (bool sent, ) = payable(governorAddress).call{value: refund}("");
         if (!sent) {
