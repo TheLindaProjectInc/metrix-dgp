@@ -1,43 +1,43 @@
-pragma solidity 0.5.8;
-import "./SafeMath.sol";
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.7;
+
+import "./Governance.sol";
 
 // interfaces
-contract GasScheduleInterface {
-    function getSchedule() public view returns (uint32[39] memory);
+interface GasScheduleInterface {
+    function getSchedule() external view returns (uint32[39] memory);
 }
-contract BlockSizeInterface {
-    function getBlockSize() public view returns (uint32[1] memory);
-}
-contract MinGasPriceInterface {
-    function getMinGasPrice() public view returns (uint32[1] memory);
-}
-contract BlockGasLimitInterface {
-    function getBlockGasLimit() public view returns (uint32[1] memory);
-}
-contract TransactionFeeRatesInterface {
-    function getTransactionFeeRates() public view returns (uint32[3] memory);
-}
-contract GovernanceCollateralInterface {
-    function getGovernanceCollateral() public view returns (uint256[1] memory);
-}
-contract BudgetFeeInterface {
-    function getBudgetFee() public view returns (uint256[1] memory);
-}
-contract GovernanceInterface {
-    function isValidGovernor(
-        address governorAddress,
-        bool checkPing,
-        bool checkCanVote
-    ) public view returns (bool valid);
 
-    function ping() public;
-    function governorCount() public returns (uint16);
+interface BlockSizeInterface {
+    function getBlockSize() external view returns (uint32[1] memory);
 }
+
+interface MinGasPriceInterface {
+    function getMinGasPrice() external view returns (uint32[1] memory);
+}
+
+interface BlockGasLimitInterface {
+    function getBlockGasLimit() external view returns (uint64[1] memory);
+}
+
+interface TransactionFeeRatesInterface {
+    function getTransactionFeeRates() external view returns (uint64[3] memory);
+}
+
+interface GovernanceCollateralInterface {
+    function getGovernanceCollateral()
+        external
+        view
+        returns (uint256[1] memory);
+}
+
+interface BudgetFeeInterface {
+    function getBudgetFee() external view returns (uint256[1] memory);
+}
+
 
 contract DGP {
-    // imports
-    using SafeMath for uint256;
-
     // events
     event NewProposal(ProposalType proposalType, address proposalAddress); // Emitted when a new proposal is made
     event ProposalPassed(ProposalType proposalType, address proposalAddress); // Emitted when a new proposal is passed
@@ -63,32 +63,28 @@ contract DGP {
     uint16 private _proposalExpiryBlocks = 14 * 960; // blocks for proposal to expire
     Proposal public proposal; // current proposal
     uint16 private _minimumGovernors = 100; // how many governors must exist before voting is enabled
-    address private _governanceAddress = address(
-        0x0000000000000000000000000000000000000089
-    ); // address of governance contract
+    address payable immutable public governanceAddress; // address of governance contract
 
     // DGP
-    address public gasScheduleAddress = address(
-        0x0000000000000000000000000000000000000080
-    );
-    address public blockSizeAddress = address(
-        0x0000000000000000000000000000000000000081
-    );
-    address public minGasPriceAddress = address(
-        0x0000000000000000000000000000000000000082
-    );
-    address public blockGasLimitAddress = address(
-        0x0000000000000000000000000000000000000083
-    );
-    address public transactionFeeRatesAddress = address(
-        0x0000000000000000000000000000000000000084
-    );
-    address public governanceCollateralAddress = address(
-        0x0000000000000000000000000000000000000086
-    );
-    address public budgetFeeAddress = address(
-        0x0000000000000000000000000000000000000087
-    );
+    address public gasScheduleAddress =
+        address(0x0000000000000000000000000000000000000080);
+    address public blockSizeAddress =
+        address(0x0000000000000000000000000000000000000081);
+    address public minGasPriceAddress =
+        address(0x0000000000000000000000000000000000000082);
+    address public blockGasLimitAddress =
+        address(0x0000000000000000000000000000000000000083);
+    address public transactionFeeRatesAddress =
+        address(0x0000000000000000000000000000000000000084);
+    address public governanceCollateralAddress =
+        address(0x0000000000000000000000000000000000000086);
+    address public budgetFeeAddress =
+        address(0x0000000000000000000000000000000000000087);
+
+
+    constructor(){
+        governanceAddress = payable(address(new Governance(payable(address(this)))));
+    }
 
     // ------------------------------
     // ------- PROPOSAL VOTING ------
@@ -98,8 +94,8 @@ contract DGP {
     function addProposal(ProposalType proposalType, address proposalAddress)
         public
     {
-        GovernanceInterface contractInterface = GovernanceInterface(
-            _governanceAddress
+        Governance contractInterface = Governance(
+            governanceAddress
         );
         uint16 governorCount = contractInterface.governorCount();
 
@@ -129,7 +125,7 @@ contract DGP {
             proposal.votes.push(msg.sender); // add sender vote
             emit NewProposal(proposalType, proposalAddress); // alert listeners
         } else if (
-            block.number.sub(proposal.proposalHeight) > _proposalExpiryBlocks
+            block.number - proposal.proposalHeight > _proposalExpiryBlocks
         ) {
             // check if vote has expired
             clearCollateralProposal();
@@ -223,7 +219,7 @@ contract DGP {
             TransactionFeeRatesInterface ci = TransactionFeeRatesInterface(
                 proposalAddress
             );
-            uint32[3] memory result = ci.getTransactionFeeRates();
+            uint64[3] memory result = ci.getTransactionFeeRates();
             for (uint8 i = 0; i < 3; i++) {
                 if (result[i] == 0) return false;
             }
@@ -264,24 +260,24 @@ contract DGP {
         return contractInterface.getMinGasPrice();
     }
 
-    function getBlockGasLimit() public view returns (uint32[1] memory) {
+    function getBlockGasLimit() public view returns (uint64[1] memory) {
         BlockGasLimitInterface contractInterface = BlockGasLimitInterface(
             blockGasLimitAddress
         );
         return contractInterface.getBlockGasLimit();
     }
 
-    function getTransactionFeeRates() public view returns (uint32[3] memory) {
+    function getTransactionFeeRates() public view returns (uint64[3] memory) {
         TransactionFeeRatesInterface contractInterface = TransactionFeeRatesInterface(
-            transactionFeeRatesAddress
-        );
+                transactionFeeRatesAddress
+            );
         return contractInterface.getTransactionFeeRates();
     }
 
     function getGovernanceCollateral() public view returns (uint256[1] memory) {
         GovernanceCollateralInterface contractInterface = GovernanceCollateralInterface(
-            governanceCollateralAddress
-        );
+                governanceCollateralAddress
+            );
         return contractInterface.getGovernanceCollateral();
     }
 
@@ -290,15 +286,5 @@ contract DGP {
             budgetFeeAddress
         );
         return contractInterface.getBudgetFee();
-    }
-
-    // Dev function for contract testing to allow the governance
-    // address to be manually set due to the circular dependency
-    function dev_setGovernanceAddress(address contractAddress) public {
-        require(
-            _governanceAddress == address(uint160(0x0)),
-            "_governanceAddress already set"
-        );
-        _governanceAddress = contractAddress;
     }
 }
