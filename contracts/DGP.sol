@@ -81,6 +81,70 @@ contract DGP {
     address public budgetFeeAddress =
         address(0x0000000000000000000000000000000000000087);
 
+    uint256 public immutable defaultGovernanceCollateral = 75E13;
+    uint256 public immutable defaultBudgetFee = 6E13;
+    uint64 public immutable  defaultMinRelayTxFee = 1E9;
+    uint64 public immutable  defaultIncrementalRelayFee = 1E9;
+    uint64 public immutable defaultDustRelayFee = 3E9;
+    uint32 public immutable defaultMinGasPrice = 5000;
+    uint64 public immutable defaultBlockGasLimit = 4E7;
+    uint32 public immutable defaultBlockSize = 2E6;
+    uint32[39] public defaultGasSchedule = [
+        10, //0: tierStepGas0
+        10, //1: tierStepGas1
+        10, //2: tierStepGas2
+        10, //3: tierStepGas3
+        10, //4: tierStepGas4
+        10, //5: tierStepGas5
+        10, //6: tierStepGas6
+        10, //7: tierStepGas7
+        10, //8: expGas
+        50, //9: expByteGas
+        30, //10: sha3Gas
+        6, //11: sha3WordGas
+        200, //12: sloadGas
+        20000, //13: sstoreSetGas
+        5000, //14: sstoreResetGas
+        15000, //15: sstoreRefundGas
+        1, //16: jumpdestGas
+        375, //17: logGas
+        8, //18: logDataGas
+        375, //19: logTopicGas
+        32000, //20: createGas
+        700, //21: callGas
+        2300, //22: callStipend
+        9000, //23: callValueTransferGas
+        25000, //24: callNewAccountGas
+        24000, //25: suicideRefundGas
+        3, //26: memoryGas
+        512, //27: quadCoeffDiv
+        200, //28: createDataGas
+        21000, //29: txGas
+        53000, //30: txCreateGas
+        4, //31: txDataZeroGas
+        68, //32: txDataNonZeroGas
+        3, //33: copyGas
+        700, //34: extcodesizeGas
+        700, //35: extcodecopyGas
+        400, //36: balanceGas
+        5000, //37: suicideGas
+        24576 //38: maxCodeSize
+    ];
+
+
+    uint256 public immutable maxGovernanceCollateral = 75E14;
+    uint256 public immutable maxBudgetFee = 6E15;
+    uint64 public immutable maxMinRelayTxFee = 1E11;
+    uint64 public immutable maxIncrementalRelayFee = 1E11;
+    uint64 public immutable maxDustRelayFee = 3E11;
+    uint64 public immutable maxMinGasPrice = 1E4;
+    uint64 public immutable minBlockGasLimit= 1E6;
+    uint64 public immutable maxBlockGasLimit= 1E9;
+    uint32 public immutable minBlockSize= 5E5;
+    uint32 public immutable maxBlockSize= 32E6;
+
+    
+
 
     constructor(){
         governanceAddress = payable(address(new Governance(payable(address(this)))));
@@ -208,30 +272,41 @@ contract DGP {
             return true;
         } else if (proposalType == ProposalType.BLOCKSIZE) {
             BlockSizeInterface ci = BlockSizeInterface(proposalAddress);
-            if (ci.getBlockSize()[0] > 0) return true;
+            uint32[1] memory size = ci.getBlockSize();
+            if (size[0] > minBlockSize && size[0] <= maxBlockSize) return true;
         } else if (proposalType == ProposalType.MINGASPRICE) {
             MinGasPriceInterface ci = MinGasPriceInterface(proposalAddress);
-            if (ci.getMinGasPrice()[0] > 0) return true;
+            uint32[1] memory price = ci.getMinGasPrice();
+            if (price[0] > 0 && price[0] <= maxMinGasPrice) return true;
         } else if (proposalType == ProposalType.BLOCKGASLIMIT) {
             BlockGasLimitInterface ci = BlockGasLimitInterface(proposalAddress);
-            if (ci.getBlockGasLimit()[0] > 0) return true;
+            uint64[1] memory limit = ci.getBlockGasLimit();
+            if (limit[0] > minBlockGasLimit && limit[0] <= maxBlockGasLimit) return true;
         } else if (proposalType == ProposalType.TRANSACTIONFEERATES) {
             TransactionFeeRatesInterface ci = TransactionFeeRatesInterface(
                 proposalAddress
             );
             uint64[3] memory result = ci.getTransactionFeeRates();
-            for (uint8 i = 0; i < 3; i++) {
-                if (result[i] == 0) return false;
+            if(result[0] == 0 || result[0] > maxMinRelayTxFee) {
+                return false;
+            }
+            if(result[1] == 0 || result[1] > maxIncrementalRelayFee) {
+                return false;
+            }
+            if(result[2] == 0 || result[2] > maxDustRelayFee) {
+                return false;
             }
             return true;
         } else if (proposalType == ProposalType.COLLATERAL) {
             GovernanceCollateralInterface ci = GovernanceCollateralInterface(
                 proposalAddress
             );
-            if (ci.getGovernanceCollateral()[0] > 0) return true;
+            uint256[1] memory collateral = ci.getGovernanceCollateral();
+            if (collateral[0] > 0 && collateral[0] <= maxGovernanceCollateral) return true;
         } else if (proposalType == ProposalType.BUDGETFEE) {
             BudgetFeeInterface ci = BudgetFeeInterface(proposalAddress);
-            if (ci.getBudgetFee()[0] > 0) return true;
+            uint256[1] memory fee = ci.getBudgetFee();
+            if (fee[0] > 0 && fee[0] <= maxBudgetFee) return true;
         }
         return false;
     }
@@ -243,48 +318,66 @@ contract DGP {
         GasScheduleInterface contractInterface = GasScheduleInterface(
             gasScheduleAddress
         );
-        return contractInterface.getSchedule();
+        uint32[39] memory schedule =  contractInterface.getSchedule();
+        for(uint i = 0; i < 39; i++){
+            if(schedule[i] == 0 || schedule[i] < defaultGasSchedule[i] / 100 || schedule[i] > defaultGasSchedule[i] * 1000){
+                schedule[i] = defaultGasSchedule[i];
+            }
+        }
+        return schedule;
     }
 
     function getBlockSize() public view returns (uint32[1] memory) {
         BlockSizeInterface contractInterface = BlockSizeInterface(
             blockSizeAddress
         );
-        return contractInterface.getBlockSize();
+        uint32[1] memory size =  contractInterface.getBlockSize();
+         if(size[0] < minBlockSize || size[0] > maxBlockSize) return [defaultBlockSize];
+        return size;
     }
 
     function getMinGasPrice() public view returns (uint32[1] memory) {
         MinGasPriceInterface contractInterface = MinGasPriceInterface(
             minGasPriceAddress
         );
-        return contractInterface.getMinGasPrice();
+        uint32[1] memory price =  contractInterface.getMinGasPrice();
+        if(price[0] < 1 || price[0] > maxMinGasPrice) return [defaultMinGasPrice];
+        return price;
     }
 
     function getBlockGasLimit() public view returns (uint64[1] memory) {
         BlockGasLimitInterface contractInterface = BlockGasLimitInterface(
             blockGasLimitAddress
         );
-        return contractInterface.getBlockGasLimit();
+        uint64[1] memory limit =  contractInterface.getBlockGasLimit();
+        if(limit[0] < minBlockGasLimit || limit[0] > maxBlockGasLimit) return [defaultBlockGasLimit];
+        return limit;
     }
 
     function getTransactionFeeRates() public view returns (uint64[3] memory) {
         TransactionFeeRatesInterface contractInterface = TransactionFeeRatesInterface(
                 transactionFeeRatesAddress
             );
-        return contractInterface.getTransactionFeeRates();
+         uint64[3] memory rates =  contractInterface.getTransactionFeeRates();
+         if(rates[0] <= 0 || rates[0] > maxMinRelayTxFee) rates[0] = defaultMinRelayTxFee;
+         if(rates[1] <= 0 || rates[1] > maxIncrementalRelayFee) rates[1] = defaultIncrementalRelayFee;
+         if(rates[2] <= 0 || rates[2] > maxDustRelayFee) rates[2] = defaultDustRelayFee;
+        return  rates;
     }
 
     function getGovernanceCollateral() public view returns (uint256[1] memory) {
         GovernanceCollateralInterface contractInterface = GovernanceCollateralInterface(
                 governanceCollateralAddress
             );
-        return contractInterface.getGovernanceCollateral();
+        uint256[1] memory collateral =  contractInterface.getGovernanceCollateral();
+        return collateral[0] > 0 && collateral[0] <= maxGovernanceCollateral ? collateral : [defaultGovernanceCollateral];
     }
 
     function getBudgetFee() public view returns (uint256[1] memory) {
         BudgetFeeInterface contractInterface = BudgetFeeInterface(
             budgetFeeAddress
         );
-        return contractInterface.getBudgetFee();
+        uint256[1] memory fee =  contractInterface.getBudgetFee();
+        return fee[0] > 0 && fee[0] <= maxBudgetFee ? fee : [defaultBudgetFee];
     }
 }
