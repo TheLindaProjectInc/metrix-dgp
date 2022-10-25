@@ -86,7 +86,7 @@ contract DGP {
     uint64 public immutable  defaultMinRelayTxFee = 1E9;
     uint64 public immutable  defaultIncrementalRelayFee = 1E9;
     uint64 public immutable defaultDustRelayFee = 3E9;
-    uint32 public immutable defaultMinGasPrice = 5000;
+    uint32 public immutable defaultMinGasPrice = 1;
     uint64 public immutable defaultBlockGasLimit = 4E7;
     uint32 public immutable defaultBlockSize = 2E6;
     uint32[39] public defaultGasSchedule = [
