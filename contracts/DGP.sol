@@ -273,7 +273,7 @@ contract DGP {
         } else if (proposalType == ProposalType.BLOCKSIZE) {
             BlockSizeInterface ci = BlockSizeInterface(proposalAddress);
             uint32[1] memory size = ci.getBlockSize();
-            if (size[0] > minBlockSize && size[0] <= maxBlockSize) return true;
+            if (size[0] >= minBlockSize && size[0] <= maxBlockSize) return true;
         } else if (proposalType == ProposalType.MINGASPRICE) {
             MinGasPriceInterface ci = MinGasPriceInterface(proposalAddress);
             uint32[1] memory price = ci.getMinGasPrice();
@@ -281,7 +281,7 @@ contract DGP {
         } else if (proposalType == ProposalType.BLOCKGASLIMIT) {
             BlockGasLimitInterface ci = BlockGasLimitInterface(proposalAddress);
             uint64[1] memory limit = ci.getBlockGasLimit();
-            if (limit[0] > minBlockGasLimit && limit[0] <= maxBlockGasLimit) return true;
+            if (limit[0] >= minBlockGasLimit && limit[0] <= maxBlockGasLimit) return true;
         } else if (proposalType == ProposalType.TRANSACTIONFEERATES) {
             TransactionFeeRatesInterface ci = TransactionFeeRatesInterface(
                 proposalAddress
