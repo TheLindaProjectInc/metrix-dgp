@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.7;
+pragma solidity 0.8.7;
 
 import "./Governance.sol";
 
@@ -154,7 +154,7 @@ contract DGP {
     // ------- PROPOSAL VOTING ------
     // ------------------------------
 
-    // add new proposal or vote on existing proposal to change the governor collateral
+    // add new proposal or vote on existing proposal  
     function addProposal(ProposalType proposalType, address proposalAddress)
         public
     {
@@ -166,20 +166,20 @@ contract DGP {
         // must be minimum governors
         require(
             governorCount >= _minimumGovernors,
-            "Not enough governors to enable voting"
+            "DGP: Not enough governors to enable voting"
         );
         // address must be governor
         require(
             contractInterface.isValidGovernor(msg.sender, true, true),
-            "Only valid governors can create proposals"
+            "DGP: Only valid governors can create proposals"
         );
         // update ping time
-        contractInterface.ping();
+        contractInterface.ping(msg.sender);
         // check a vote isn't active
         if (!proposal.onVote) {
             require(
                 validateProposedContract(proposalType, proposalAddress) == true,
-                "The proposed contract did not operate as expected"
+                "DGP: The proposed contract did not operate as expected"
             );
             proposal.onVote = true; // put proposal on vote, no changes until vote is setteled or removed
             proposal.proposalAddress = proposalAddress; // set new proposal for vote

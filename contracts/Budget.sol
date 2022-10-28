@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.7;
+pragma solidity 0.8.7;
 
 
 import "./DGP.sol";
@@ -79,14 +79,14 @@ contract Budget {
         // limit number of active proposals
         require(
             _proposalCount < _maximumActiveProposals,
-            "Maximum active proposals reached"
+            "Budget: Maximum active proposals reached"
         );
         // must pay listing fee
-        require(msg.value == listingFee, "Buget listing fee is required");
+        require(msg.value == listingFee, "Budget: Budget listing fee is required");
         // must have duration and requested amount
-        require(requested > 0, "Requested amount cannot be less than 1");
-        require(duration > 0, "Requested duration cannot be less than 1");
-        require(duration < 13, "Requested duration cannot be greater than 12");
+        require(requested > 0, "Budget: Requested amount cannot be less than 1");
+        require(duration > 0, "Budget: Requested duration cannot be less than 1");
+        require(duration < 13, "Budget: Requested duration cannot be greater than 12");
         // create new proposal
         _currentProposalId++;
         _proposalCount++;
@@ -135,11 +135,11 @@ contract Budget {
         // must be a valid governor
         require(
             governanceInterface.isValidGovernor(msg.sender, true, true),
-            "Address is not a valid governor"
+            "Budget: Address is not a valid governor"
         );
         // must be a valid proposal
         int16 proposalRawIndex = getProposalIndex(proposalId);
-        require(proposalRawIndex >= 0, "Proposal not found");
+        require(proposalRawIndex >= 0, "Budget: Proposal not found");
         uint8 proposalIndex = uint8(uint16(proposalRawIndex));
         // create unique vote value to handle reusing memory of old budgets
         uint16 voteData = uint16(proposalId) << 8;
@@ -162,7 +162,7 @@ contract Budget {
         // log vote
         votes[proposalIndex][msg.sender] = voteData;
         // update governor ping
-        governanceInterface.ping();
+        governanceInterface.ping(msg.sender);
     }
 
     /** @dev Function to get a a governors current vote for the proposals.
@@ -288,7 +288,7 @@ contract Budget {
      */
     function proposalVoteStatus(uint8 proposalId) public view returns (Vote) {
         int16 proposalRawIndex = getProposalIndex(proposalId);
-        require(proposalRawIndex >= 0, "Proposal not found");
+        require(proposalRawIndex >= 0, "Budget: Proposal not found");
         uint8 proposalIndex = uint8(uint16(proposalRawIndex));
         return getVote(votes[proposalIndex][msg.sender], proposalId);
     }
