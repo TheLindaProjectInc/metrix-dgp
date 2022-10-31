@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.7;
+pragma solidity 0.8.7;
 
 import "./DGP.sol";
 import "./Budget.sol";
@@ -32,6 +32,11 @@ contract Governance {
     // rewards
     uint16 private _rewardBlockInterval = 1920; // how often governors are rewarded. At minimum it should be the size of _maximumGovernors
     uint256 private _lastRewardBlock = 0; // only allow reward to be paid once per block
+
+    modifier onlyDGP() {
+        require(msg.sender == budgetAddress || msg.sender == dgpAddress, "Governance: Not DGP");
+        _;
+    }
 
     constructor(address payable _dgpAddress) {
         dgpAddress = _dgpAddress;
@@ -76,6 +81,21 @@ contract Governance {
         );
         // update ping
         governors[msg.sender].lastPing = block.number;
+    }
+
+    function ping(address governor) onlyDGP() public {
+        // check if a governor
+        require(
+            governors[governor].blockHeight > 0,
+            "Governance: Must be a governor to ping"
+        );
+        // check if governor is valid
+        require(
+            isValidGovernor(governor, false, false),
+            "Governance: Governor is not currently valid"
+        );
+        // update ping
+        governors[governor].lastPing = block.number;
     }
 
     // enroll an address to be a governor
@@ -130,7 +150,7 @@ contract Governance {
         // check if a governor
         require(
             governors[msg.sender].blockHeight > 0,
-            "Must be a governor to unenroll"
+            "Governance: Must be a governor to unenroll"
         );
         uint256 requiredCollateral = getRequiredCollateral();
         // check blocks have passed to make a change
