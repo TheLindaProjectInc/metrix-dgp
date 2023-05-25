@@ -301,7 +301,13 @@ contract Governance {
     function currentWinner() public view returns (address winner) {
         uint16 i;
         for (i = 0; i < _governorCount; i++) {
-            if (isValidWinner(governorAddresses[i])) {
+            if (
+                isValidGovernor(governorAddresses[i], true, false) &&
+                block.number - governors[governorAddresses[i]].lastReward >=
+                _rewardBlockInterval &&
+                block.number - 1920 >=
+                governors[governorAddresses[i]].blockHeight
+            ) {
                 return governorAddresses[i];
             }
         }
