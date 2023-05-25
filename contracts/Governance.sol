@@ -7,9 +7,9 @@ import "./Budget.sol";
 
 contract Governance {
     // dgp
-    address payable immutable public dgpAddress;
+    address payable public immutable dgpAddress;
 
-    address payable immutable public budgetAddress;
+    address payable public immutable budgetAddress;
 
     // governors
     struct Governor {
@@ -34,13 +34,18 @@ contract Governance {
     uint256 private _lastRewardBlock = 0; // only allow reward to be paid once per block
 
     modifier onlyDGP() {
-        require(msg.sender == budgetAddress || msg.sender == dgpAddress, "Governance: Not DGP");
+        require(
+            msg.sender == budgetAddress || msg.sender == dgpAddress,
+            "Governance: Not DGP"
+        );
         _;
     }
 
     constructor(address payable _dgpAddress) {
         dgpAddress = _dgpAddress;
-        budgetAddress = payable(address(new Budget(_dgpAddress, payable(address(this)))));
+        budgetAddress = payable(
+            address(new Budget(_dgpAddress, payable(address(this))))
+        );
     }
 
     // ------------------------------
@@ -83,7 +88,7 @@ contract Governance {
         governors[msg.sender].lastPing = block.number;
     }
 
-    function ping(address governor) onlyDGP() public {
+    function ping(address governor) public onlyDGP {
         // check if a governor
         require(
             governors[governor].blockHeight > 0,
@@ -207,7 +212,9 @@ contract Governance {
         // refund
         (bool sent, ) = payable(governorAddress).call{value: refund}("");
         if (!sent) {
-            (bool stash, ) = payable(budgetAddress).call{value: refund}(abi.encodeWithSignature("fund()"));
+            (bool stash, ) = payable(budgetAddress).call{value: refund}(
+                abi.encodeWithSignature("fund()")
+            );
 
             require(stash, "Governance: Failed to stash removal failure funds");
         }
@@ -297,7 +304,9 @@ contract Governance {
             if (
                 isValidGovernor(governorAddresses[i], true, false) &&
                 block.number - governors[governorAddresses[i]].lastReward >=
-                _rewardBlockInterval
+                _rewardBlockInterval &&
+                block.number - 1920 >=
+                governors[governorAddresses[i]].blockHeight
             ) {
                 return governorAddresses[i];
             }
